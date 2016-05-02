@@ -12,6 +12,7 @@ class ViewController: UIViewController, UISearchBarDelegate {
     
     @IBOutlet weak var buscar: UISearchBar!
     @IBOutlet weak var indicador: UIActivityIndicatorView!
+    @IBOutlet weak var indicadorImagen: UIActivityIndicatorView!
     
     @IBOutlet weak var titulo: UILabel!
     @IBOutlet weak var autor1: UILabel!
@@ -23,6 +24,7 @@ class ViewController: UIViewController, UISearchBarDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        buscar.text = "1577486056"
         autor1.text = ""
         autor2.text = ""
         autor3.text = ""
@@ -99,15 +101,19 @@ class ViewController: UIViewController, UISearchBarDelegate {
     func optenerDatos(dato: NSData, isbn: String){
         var nombres = [String]()
         var titulo = ""
-        var img = ""
+        //var img = ""
         do{
             let json = try NSJSONSerialization.JSONObjectWithData(dato, options: NSJSONReadingOptions.MutableLeaves)
             if  let js = json as? NSDictionary{
                 if  let jsIsbn = js["ISBN:\(isbn)"] as? NSDictionary  {
                     titulo = jsIsbn["title"] as! NSString as String
                     if let imagenes = jsIsbn["cover"] as? NSDictionary{
-                        img = imagenes["medium"] as! NSString as String
+                        //img = imagenes["medium"] as! NSString as String
                         //img = imagenes["small"] as! NSString as String
+                        let url = NSURL(string: imagenes["medium"] as! NSString as String)
+                        loadImagen(url!)
+                    }else{
+                        self.imgPortada.image = UIImage(named: "book")
                     }
                     let cantidadAutores = jsIsbn["authors"]?.count
                     for indice in 0 ..< cantidadAutores!{
@@ -130,22 +136,41 @@ class ViewController: UIViewController, UISearchBarDelegate {
                 self.autor1.text = nombres[0]
                 self.autor2.text = nombres[1]
                 self.autor3.text = ""
-            }else if num == 3{
+            }else {
                 self.autor1.text = nombres[0]
                 self.autor2.text = nombres[1]
                 self.autor3.text = nombres[2]
             }
         }
-        if !img.isEmpty{
-            if let url = NSURL(string: img) {
-                if let data = NSData(contentsOfURL: url) {
-                    imgPortada.image = UIImage(data: data)
-                }
-            }
-        }else{
-            self.imgPortada.image = UIImage(named: "book")
-        }
+//        if !img.isEmpty{
+//            if let url = NSURL(string: img) {
+//                if let data = NSData(contentsOfURL: url) {
+//                    imgPortada.image = UIImage(data: data)
+//                }
+//            }
+//            loadImagen(img)
+//        }else{
+//            self.imgPortada.image = UIImage(named: "book")
+//        }
         self.indicador.stopAnimating()
+    }
+    
+    func loadImagen(direccionImagen:NSURL) {
+        //let imgURL = direccionImagen
+        let resq: NSURLRequest = NSURLRequest(URL: direccionImagen)
+        let sesion = NSURLSession.sharedSession()
+        let miSesion = sesion.dataTaskWithRequest(resq){
+            (data, response, error) -> Void in
+            if (error == nil && data != nil){
+                func mostrarImg(){
+                    self.imgPortada.image = UIImage(data: data!)
+                    self.indicadorImagen.stopAnimating()
+                }
+                dispatch_async(dispatch_get_main_queue(), mostrarImg)
+            }
+        }
+        miSesion.resume()
+        self.indicadorImagen.startAnimating()
     }
     
     @IBAction func limpiar(sender: AnyObject) {
